@@ -19,6 +19,7 @@ import { SettingsView } from '@/components/views/SettingsView';
 import { SkillsView } from '@/components/views/SkillsView';
 import { FeedbackView } from '@/components/views/FeedbackView';
 import { GraphView } from '@/components/graph/GraphView';
+import HyperLearnView from '@/components/views/HyperLearnView';
 import { TaskModal } from '@/components/shared/TaskModal';
 import { AgentModal } from '@/components/shared/AgentModal';
 import { ProjectModal } from '@/components/shared/ProjectModal';
@@ -205,6 +206,7 @@ export default function MC() {
               {view === 'settings' && <SettingsView agents={db.agents} theme={theme} onUpdateAgent={db.updateAgent} />}
               {view === 'feedback' && <FeedbackView theme={theme} />}
               {view === 'graph' && <GraphView theme={theme} />}
+              {view === 'hyperlearn' && <HyperLearnView />}
               {view === 'virtual' && <VirtualOfficePage />}
             </>
           )}
