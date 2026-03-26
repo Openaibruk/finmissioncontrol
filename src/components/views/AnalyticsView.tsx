@@ -19,7 +19,10 @@ export function AnalyticsView() {
       const fmt = (d: Date) => d.toISOString().split('T')[0];
       const resp = await fetch(MCP_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer mcp_gCNsJa4XoP3Tb9o143jPiR1AyoF5iN7HITnPmZwwfHdIk6aC'
+        },
         body: JSON.stringify({
           jsonrpc: '2.0', method: 'tools/call',
           params: { name: 'get_margin_analysis', arguments: { startDate: fmt(start), endDate: fmt(end) } },

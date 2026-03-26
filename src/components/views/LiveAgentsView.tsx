@@ -1,27 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Agent, Task } from '@/lib/types';
-import { cn, getAvatar } from '@/lib/utils';
+import { Agent, Task, Activity } from '@/lib/types';
+import { cn, getAvatar, getAgentStatusInfo } from '@/lib/utils';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { AgentTriggerModal } from '@/components/shared/AgentTriggerModal';
 import { Users, Play, Search, RefreshCw, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface LiveAgent extends Agent {
   currentTask?: string;
-  lastActivity?: string;
+  lastActivityDate?: Date;
   tasksCompleted?: number;
   tasksInProgress?: number;
+  computedStatus?: string;
+  statusColor?: string;
 }
 
 interface LiveAgentsViewProps {
   agents: Agent[];
   tasks: Task[];
+  activities?: Activity[];
   loading?: boolean;
   theme: 'dark' | 'light';
 }
 
-export function LiveAgentsView({ agents, tasks, loading, theme }: LiveAgentsViewProps) {
+export function LiveAgentsView({ agents, tasks, activities = [], loading, theme }: LiveAgentsViewProps) {
   const isDark = theme === 'dark';
   const classes = useThemeClasses(isDark);
   const [search, setSearch] = useState('');
@@ -35,24 +38,40 @@ export function LiveAgentsView({ agents, tasks, loading, theme }: LiveAgentsView
   }, []);
 
   const liveAgents: LiveAgent[] = agents.map(agent => {
-    const agentTasks = tasks.filter(t => (t.assignees || []).some(a => a?.replace('@','') === agent.name));
+    const agentTasks = tasks.filter(t => (t.assignees || []).some(a => a?.replace(/^@+/, '') === agent.name));
+    const agentActivities = activities.filter(a => a.agent_name?.replace(/^@+/, '') === agent.name);
+    
     const inProgress = agentTasks.filter(t => t.status === 'in_progress');
     const completed = agentTasks.filter(t => t.status === 'done');
     const inbox = agentTasks.filter(t => t.status === 'inbox');
     const currentTask = inProgress.sort((a, b) =>
       new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
     )[0];
+
+    // Find latest activity
+    let lastDate: Date | null = null;
+    if (currentTask?.updated_at) lastDate = new Date(currentTask.updated_at);
+    if (agentActivities.length > 0) {
+      const latestAct = new Date(agentActivities[0].created_at);
+      if (!lastDate || latestAct > lastDate) lastDate = latestAct;
+    }
+
+    const statusInfo = getAgentStatusInfo(lastDate);
+    const computedStatus = lastDate && (new Date().getTime() - lastDate.getTime()) < 600000 ? 'active' : lastDate && (new Date().getTime() - lastDate.getTime()) < 3600000 ? 'idle' : 'offline';
+
     return {
       ...agent,
       currentTask: currentTask?.title,
-      lastActivity: currentTask?.updated_at || currentTask?.created_at,
+      lastActivityDate: lastDate || undefined,
+      computedStatus,
+      statusColor: statusInfo.color,
       tasksCompleted: completed.length,
       tasksInProgress: inProgress.length + inbox.length,
     };
   });
 
   const filtered = liveAgents.filter(a => {
-    if (filterStatus !== 'all' && a.status !== filterStatus) return false;
+    if (filterStatus !== 'all' && a.computedStatus !== filterStatus) return false;
     if (search && !(a.name || '').toLowerCase().includes(search.toLowerCase()) && !(a.role || '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -98,7 +117,7 @@ export function LiveAgentsView({ agents, tasks, loading, theme }: LiveAgentsView
               filterStatus === status ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
                 : cn("border", isDark ? 'border-neutral-800 text-neutral-400' : 'border-neutral-200 text-neutral-500'))}>
             {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
-            <span className="ml-1.5 opacity-60">({status === 'all' ? agents.length : agents.filter(a => a.status === status).length})</span>
+            <span className="ml-1.5 opacity-60">({status === 'all' ? liveAgents.length : liveAgents.filter(a => a.computedStatus === status).length})</span>
           </button>
         ))}
       </div>
@@ -114,7 +133,7 @@ export function LiveAgentsView({ agents, tasks, loading, theme }: LiveAgentsView
                   <img src={getAvatar(agent.name)} alt={agent.name || 'Agent'} className="w-10 h-10 rounded-full border border-neutral-700 object-cover" />
                   <div className={cn("absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2",
                     isDark ? 'border-neutral-900' : 'border-white',
-                    agent.status === 'active' ? 'bg-emerald-500 animate-pulse' : agent.status === 'idle' ? 'bg-yellow-500' : 'bg-red-500')} />
+                    agent.computedStatus === 'active' ? 'bg-emerald-500 animate-pulse' : agent.computedStatus === 'idle' ? 'bg-yellow-500' : 'bg-red-500')} />
                 </div>
                 <div>
                   <h3 className={cn("font-semibold text-sm", isDark ? 'text-white' : 'text-neutral-900')}>{agent.name || 'Unknown'}</h3>
@@ -122,9 +141,9 @@ export function LiveAgentsView({ agents, tasks, loading, theme }: LiveAgentsView
                 </div>
               </div>
               <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium",
-                agent.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' :
-                agent.status === 'idle' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-red-500/10 text-red-400')}>
-                {agent.status || 'unknown'}
+                agent.computedStatus === 'active' ? 'bg-emerald-500/10 text-emerald-400' :
+                agent.computedStatus === 'idle' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-red-500/10 text-red-400')}>
+                {agent.computedStatus || 'unknown'}
               </span>
             </div>
 

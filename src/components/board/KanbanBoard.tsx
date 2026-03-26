@@ -325,7 +325,7 @@ export function KanbanBoard({ tasks, agents, onTaskClick, onMoveTask, onNewTask,
                       <div className="flex items-center gap-1.5">
                         <div className="flex -space-x-1">
                           {task.assignees?.slice(0, 2).map((assignee, i) => (
-                            <img key={i} src={getAvatar(assignee.replace('@', ''))} alt={assignee}
+                            <img key={i} src={getAvatar(assignee.replace(/^@+/, ''))} alt={assignee}
                               className="w-4 h-4 rounded-full border border-neutral-900" title={assignee} />
                           ))}
                         </div>

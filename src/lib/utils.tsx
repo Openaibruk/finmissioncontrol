@@ -40,7 +40,7 @@ const AVATARS: Record<string, string> = {
 
 export function getAvatar(name: string | null | undefined): string {
   if (!name) return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=unknown&backgroundColor=6366f1`;
-  const cleanName = name.replace('@', '');
+  const cleanName = name.replace(/^@+/, '');
   return AVATARS[cleanName] || `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${cleanName}&backgroundColor=6366f1`;
 }
 

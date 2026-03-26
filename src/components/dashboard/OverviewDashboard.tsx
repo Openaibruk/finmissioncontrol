@@ -44,7 +44,21 @@ export function OverviewDashboard({ stats, tasks, agents, activities, projects, 
   const [statusMenu, setStatusMenu] = useState<string | null>(null);
   const classes = useThemeClasses(isDark);
   const { data: gwStatus } = useGatewayStatus(30000);
-  const activeAgents = agents.filter(a => a.status === 'active');
+  const activeAgents = agents.filter(agent => {
+    const agentTasks = tasks.filter(t => t.assignees?.some(a => a.replace(/^@+/, '') === agent.name));
+    const agentActivities = activities.filter(a => a.agent_name?.replace(/^@+/, '') === agent.name);
+    
+    let lastDate: Date | null = null;
+    const currentTask = agentTasks.filter(t => t.status === 'in_progress').sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())[0];
+    if (currentTask?.updated_at) lastDate = new Date(currentTask.updated_at);
+    if (agentActivities.length > 0) {
+      const latestAct = new Date(agentActivities[0].created_at);
+      if (!lastDate || latestAct > lastDate) lastDate = latestAct;
+    }
+    
+    // An agent is considered 'active' if they've had activity in the last 10 minutes
+    return lastDate && (new Date().getTime() - lastDate.getTime()) < 600000;
+  });
   const queueCount = tasks.filter(t => t.status === 'inbox').length;
   const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
   const reviewCount = tasks.filter(t => t.status === 'review').length;
@@ -235,7 +249,7 @@ export function OverviewDashboard({ stats, tasks, agents, activities, projects, 
                   <div className={cn("text-[10px]", classes.muted)}>{agent.role || 'Agent'}</div>
                 </div>
                 <span className={cn("text-[10px] shrink-0", classes.subtle)}>
-                  {tasks.filter(t => t.assignees?.includes(`@${agent.name}`) && t.status === 'done').length} done
+                  {tasks.filter(t => t.assignees?.some(a => a.replace(/^@+/, '') === agent.name) && t.status === 'done').length} done
                 </span>
               </div>
             )) : <div className={cn("text-[12px] text-center py-4", classes.muted)}>No agents</div>}

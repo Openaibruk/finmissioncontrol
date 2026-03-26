@@ -49,7 +49,7 @@ export function AgentGrid({ agents, tasks, onAgentClick, onNewAgent, loading, th
     const lastByAgent: Record<string, Date> = {};
     tasks.forEach(task => {
       task.assignees?.forEach(assignee => {
-        const name = assignee.replace('@', '');
+        const name = assignee.replace(/^@+/, '');
         const taskDate = new Date(task.created_at);
         if (!lastByAgent[name] || taskDate > lastByAgent[name]) lastByAgent[name] = taskDate;
       });
@@ -58,8 +58,9 @@ export function AgentGrid({ agents, tasks, onAgentClick, onNewAgent, loading, th
   }, [tasks]);
 
   const getAgentStats = (name: string) => {
-    const done = tasks.filter(t => t.status === 'done' && t.assignees?.includes(`@${name}`)).length;
-    const active = tasks.filter(t => ['assigned', 'in_progress', 'review'].includes(t.status) && t.assignees?.includes(`@${name}`)).length;
+    const includesAgent = (t: Task) => t.assignees?.some(a => a.replace(/^@+/, '') === name);
+    const done = tasks.filter(t => t.status === 'done' && includesAgent(t)).length;
+    const active = tasks.filter(t => ['assigned', 'in_progress', 'review'].includes(t.status) && includesAgent(t)).length;
     return { done, active };
   };
 
