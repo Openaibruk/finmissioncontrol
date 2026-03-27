@@ -25,6 +25,7 @@ interface OverviewDashboardProps {
   projects: Project[];
   loading: boolean;
   theme: 'dark' | 'light';
+  activeDomain?: string;
   onEditProject: (project: Project) => void;
   onNewProject: () => void;
   onUpdateProjectStatus?: (projectId: string, status: string) => void;
@@ -39,10 +40,10 @@ function timeAgoShort(dateString: string): string {
   return `${Math.round(hrs / 24)}d`;
 }
 
-export function OverviewDashboard({ stats, tasks, agents, activities, projects, loading, theme, onEditProject, onNewProject, onUpdateProjectStatus }: OverviewDashboardProps) {
+export function OverviewDashboard({ stats, tasks, agents, activities, projects, loading, theme, activeDomain, onEditProject, onNewProject, onUpdateProjectStatus }: OverviewDashboardProps) {
   const isDark = theme === 'dark';
   const [statusMenu, setStatusMenu] = useState<string | null>(null);
-  const classes = useThemeClasses(isDark);
+  const classes = useThemeClasses(isDark, activeDomain);
   const { data: gwStatus } = useGatewayStatus(30000);
   const activeAgents = agents.filter(agent => {
     const agentTasks = tasks.filter(t => t.assignees?.some(a => a.replace(/^@+/, '') === agent.name));

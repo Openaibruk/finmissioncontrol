@@ -36,6 +36,7 @@ export interface Project {
   description?: string;
   status: 'active' | 'complete' | 'on_hold' | 'paused' | 'archived';
   department?: string;
+  domain?: string;
   done_tasks: number;
   total_tasks: number;
   cost_tokens?: number;

@@ -9,6 +9,8 @@ import { useState, useRef, useEffect } from 'react';
 
 interface HeaderProps {
   view: ViewType;
+  activeDomain: string;
+  setActiveDomain: (domain: string) => void;
   onMenuClick: () => void;
   onNewTask: () => void;
   onNewProject: () => void;
@@ -20,7 +22,7 @@ interface HeaderProps {
   pendingApprovals?: number;
 }
 
-export function Header({ view, onMenuClick, onNewTask, onNewProject, onNewAgent, onOpenFeedback, theme, agents, tasks, pendingApprovals = 0 }: HeaderProps) {
+export function Header({ view, activeDomain, setActiveDomain, onMenuClick, onNewTask, onNewProject, onNewAgent, onOpenFeedback, theme, agents, tasks, pendingApprovals = 0 }: HeaderProps) {
   const isDark = theme === 'dark';
   const classes = useThemeClasses(isDark);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -39,11 +41,33 @@ export function Header({ view, onMenuClick, onNewTask, onNewProject, onNewAgent,
   }, []);
 
   return (
-    <header className={cn("h-12 border-b flex items-center justify-between px-4 md:px-6 shrink-0", classes.divider)}>
+    <header className={cn("h-14 border-b flex items-center justify-between px-4 md:px-6 shrink-0 transition-colors duration-300", 
+      activeDomain === 'ChipChip' ? (isDark ? "bg-[#111111] border-[#331111]" : "bg-white border-[#ffcccc]") : "",
+      classes.divider)}>
       <div className="flex items-center space-x-3">
         <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center">
           <Menu className="w-4 h-4" />
         </button>
+        
+        {/* Domain Switcher */}
+        <div className="hidden md:flex bg-neutral-100 dark:bg-neutral-800/50 p-1 rounded-md">
+          {['All', 'ChipChip', 'Mission Control'].map(domain => (
+            <button
+              key={domain}
+              onClick={() => setActiveDomain(domain)}
+              className={cn(
+                "px-3 py-1 text-[11px] font-medium rounded-sm transition-all duration-200",
+                activeDomain === domain 
+                  ? (domain === 'ChipChip' 
+                      ? "bg-[#e11d48] text-white shadow-sm" 
+                      : isDark ? "bg-neutral-700 text-white shadow-sm" : "bg-white text-neutral-900 shadow-sm")
+                  : (isDark ? "text-neutral-400 hover:text-neutral-200" : "text-neutral-500 hover:text-neutral-700")
+              )}
+            >
+              {domain}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

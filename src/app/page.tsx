@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useTheme, useThemeClasses } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
@@ -32,9 +32,10 @@ import { VirtualOfficeView } from '@/components/views/VirtualOfficeView';
 
 export default function MC() {
   const { theme, toggle: toggleTheme, isDark } = useTheme();
-  const classes = useThemeClasses(isDark);
   const db = useSupabase();
 
+  const [activeDomain, setActiveDomain] = useState<string>('All');
+  const classes = useThemeClasses(isDark, activeDomain);
   const [view, setView] = useState<ViewType>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -46,7 +47,24 @@ export default function MC() {
   const [isNewProject, setIsNewProject] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  const pendingApprovals = db.tasks.filter(t => t.status === 'approval_needed');
+  const filteredProjects = useMemo(() => {
+    if (activeDomain === 'All') return db.projects;
+    return db.projects.filter(p => (p.domain && p.domain.toLowerCase() === activeDomain.toLowerCase()) || p.name.toLowerCase().includes(activeDomain.toLowerCase()));
+  }, [db.projects, activeDomain]);
+
+  const filteredTasks = useMemo(() => {
+    if (activeDomain === 'All') return db.tasks;
+    const projectIds = new Set(filteredProjects.map(p => p.id));
+    return db.tasks.filter(t => (t.project_id && projectIds.has(t.project_id)) || t.title.toLowerCase().includes(activeDomain.toLowerCase()));
+  }, [db.tasks, filteredProjects, activeDomain]);
+
+  const filteredActivities = useMemo(() => {
+    if (activeDomain === 'All') return db.activities;
+    // Basic filter: only show activities from agents assigned to filtered tasks or general Nova actions if related
+    return db.activities; // Activities are kept global for now to preserve the activity pulse realism
+  }, [db.activities, activeDomain]);
+
+  const pendingApprovals = filteredTasks.filter(t => t.status === 'approval_needed');
 
   const handleNewTaskClick = useCallback(() => {
     setEditingTask(null);
@@ -146,23 +164,24 @@ export default function MC() {
       />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
-          view={view} onMenuClick={() => setIsSidebarOpen(true)}
+          view={view} activeDomain={activeDomain} setActiveDomain={setActiveDomain}
+          onMenuClick={() => setIsSidebarOpen(true)}
           onNewTask={handleNewTaskClick} onNewProject={handleNewProjectClick}
           onNewAgent={handleNewAgentClick}
           onOpenFeedback={() => setShowFeedback(true)}
-          theme={theme} agents={db.agents} tasks={db.tasks}
+          theme={theme} agents={db.agents} tasks={filteredTasks}
           pendingApprovals={pendingApprovals.length}
         />
-        <div className="flex-1 overflow-y-auto custom-scroll">
+        <div className={cn("flex-1 overflow-y-auto custom-scroll transition-colors duration-300", activeDomain === 'ChipChip' ? "bg-white text-black font-sans" : "")}>
           {db.error && <div className="p-4 text-red-500 bg-red-100 dark:bg-red-900/20 rounded m-4">Error: {db.error}</div>}
           {db.loading && !db.error && <div className="p-4 text-center text-violet-500">Loading data...</div>}
           {!db.loading && !db.error && (
             <>
               {view === 'dashboard' && (
                 <OverviewDashboard
-                  stats={db.stats} tasks={db.tasks} agents={db.agents}
-                  activities={db.activities} projects={db.projects}
-                  loading={db.loading} theme={theme}
+                  stats={db.stats} tasks={filteredTasks} agents={db.agents}
+                  activities={filteredActivities} projects={filteredProjects}
+                  loading={db.loading} theme={theme} activeDomain={activeDomain}
                   onEditProject={handleEditProjectClick}
                   onNewProject={handleNewProjectClick}
                   onUpdateProjectStatus={(id, status) => db.updateProject({ id, status } as Partial<Project> & { id: string })}
@@ -170,7 +189,7 @@ export default function MC() {
               )}
               {view === 'board' && (
                 <KanbanBoard
-                  tasks={db.tasks} agents={db.agents}
+                  tasks={filteredTasks} agents={db.agents}
                   onTaskClick={handleEditTaskClick} onMoveTask={db.moveTask}
                   onNewTask={handleNewTaskClick}
                   loading={db.loading} theme={theme}
@@ -178,7 +197,7 @@ export default function MC() {
               )}
               {view === 'agents' && (
                 <AgentGrid
-                  agents={db.agents} tasks={db.tasks}
+                  agents={db.agents} tasks={filteredTasks}
                   onAgentClick={handleEditAgentClick}
                   onNewAgent={handleNewAgentClick}
                   loading={db.loading} theme={theme}
@@ -186,13 +205,14 @@ export default function MC() {
               )}
               {view === 'live-agents' && (
                 <LiveAgentsView
-                  agents={db.agents} tasks={db.tasks}
+                  agents={db.agents} tasks={filteredTasks}
+                  activities={db.activities}
                   loading={db.loading} theme={theme}
                 />
               )}
               {view === 'projects' && (
                 <ProjectsView
-                  projects={db.projects} tasks={db.tasks} agents={db.agents}
+                  projects={filteredProjects} tasks={filteredTasks} agents={db.agents}
                   loading={db.loading} theme={theme}
                   onEditTask={handleEditTaskClick}
                   onEditProject={handleEditProjectClick}
@@ -206,7 +226,7 @@ export default function MC() {
               {view === 'feedback' && <FeedbackView theme={theme} />}
               {view === 'graph' && <GraphView theme={theme} />}
               {view === 'hyperlearn' && <HyperLearnView />}
-              {view === 'virtual' && <VirtualOfficeView agents={db.agents} tasks={db.tasks} activities={db.activities} theme={theme} />}
+              {view === 'virtual' && <VirtualOfficeView agents={db.agents} tasks={filteredTasks} activities={db.activities} theme={theme} />}
             </>
           )}
         </div>
@@ -214,17 +234,17 @@ export default function MC() {
       <NovaWidget theme={theme} />
       <QuickTrigger theme={theme} agents={db.agents} />
       {(isTaskModalOpen || editingTask) && (
-        <TaskModal task={editingTask} isNew={isNewTask} projects={db.projects} agents={db.agents}
+        <TaskModal task={editingTask} isNew={isNewTask} projects={filteredProjects} agents={db.agents}
           onClose={() => { setIsTaskModalOpen(false); setEditingTask(null); }}
           onSave={handleTaskModalSave} onDelete={handleTaskDelete} theme={theme} />
       )}
       {(editingAgent || isNewAgent) && (
-        <AgentModal agent={editingAgent} isNew={isNewAgent} tasks={db.tasks}
+        <AgentModal agent={editingAgent} isNew={isNewAgent} tasks={filteredTasks}
           onClose={() => { setEditingAgent(null); setIsNewAgent(false); }}
           onSave={handleAgentModalSave} onDelete={handleAgentDelete} theme={theme} />
       )}
       {(editingProject || isNewProject) && (
-        <ProjectModal project={editingProject} isNew={isNewProject} tasks={db.tasks}
+        <ProjectModal project={editingProject} isNew={isNewProject} tasks={filteredTasks}
           onClose={() => { setEditingProject(null); setIsNewProject(false); }}
           onSave={handleProjectModalSave} onDelete={handleProjectDelete} theme={theme} />
       )}
