@@ -218,7 +218,7 @@ export default function MC() {
                   onEditProject={handleEditProjectClick}
                 />
               )}
-              {view === 'approvals' && <ApprovalsView />}
+              {view === 'approvals' && <ApprovalsView tasks={filteredTasks} projects={filteredProjects} onApprove={db.approveTask} theme={theme} activeDomain={activeDomain} />}
               {view === 'skills' && <SkillsView agents={db.agents} onUpdateAgent={db.updateAgent} theme={theme} />}
               {view === 'insights' && <AnalyticsView />}
               {view === 'activity' && <ActivityView activities={db.activities} agents={db.agents} loading={db.loading} theme={theme} />}
@@ -253,15 +253,7 @@ export default function MC() {
   );
 }
 
-// Inline placeholder views
-function ApprovalsView() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-white mb-6">Approvals</h1>
-      <div className="text-neutral-400">No pending approvals.</div>
-    </div>
-  );
-}
+import { ApprovalsView } from '@/components/views/ApprovalsView';
 
 function WorkflowView() {
   return (
