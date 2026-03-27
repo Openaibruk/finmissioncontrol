@@ -817,6 +817,14 @@
       "source": "workspace"
     },
     {
+      "id": "agentmail",
+      "name": "agentmail",
+      "description": "Send and receive emails autonomously via Nova's official AgentMail inbox (novamars@agentmail.to). Useful for verifying accounts, checking inbox messages, getting authentication codes, sending outbound emails, and reading full email content.",
+      "category": "Core",
+      "path": "/home/ubuntu/.openclaw/workspace/skills/agentmail/SKILL.md",
+      "source": "workspace"
+    },
+    {
       "id": "active-maintenance",
       "name": "active-maintenance",
       "description": "Automated system health checks, memory/log cleanup, and disk maintenance for OpenClaw. Use when asked to clean logs, check disk usage, optimize memory files, or run maintenance. Also triggered automatically via cron.",
