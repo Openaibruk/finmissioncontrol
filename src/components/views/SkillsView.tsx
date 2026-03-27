@@ -37,13 +37,13 @@ export function SkillsView({ theme, agents, onUpdateAgent }: SkillsViewProps) {
   const fetchSkills = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/skills');
+      const res = await fetch('/api/skills.json');
       const data = await res.json();
       if (data.skills) {
         setSkills(data.skills.map((s: any) => ({
           ...s,
-          scope: s.category === 'Core' || s.category === 'Utilities' ? 'global' : 'agent',
-          source: 'workspace'
+          scope: s.category === 'Core' || s.category === 'Utilities' || s.category === 'Security' ? 'global' : 'agent',
+          source: s.source || 'workspace'
         })));
       }
     } catch (e) {
